@@ -1,19 +1,23 @@
 const mysql = require("mysql2");
 
-const connection = mysql.createConnection({
+const pool = mysql.createPool({
   host: "kodama.proxy.rlwy.net",
   user: "root",
   password: "KpIQOiLnVpCSnDSZbstGyRBfIpDWOsYM",
   database: "railway",
-  port: 26625
+  port: 26625,
+  waitForConnections: true,
+  connectionLimit: 10,
+  connectTimeout: 30000
 });
 
-connection.connect(err => {
+pool.getConnection((err, connection) => {
   if (err) {
     console.error("❌ MySQL connection failed:", err);
     return;
   }
   console.log("✅ Connected to MySQL database");
+  connection.release();
 });
 
-module.exports = connection;
+module.exports = pool;
