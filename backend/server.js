@@ -6,7 +6,10 @@ const db = require("./db");
 const app = express();
 const PORT = 4000;
 
-app.use(cors());
+app.use(cors({
+  origin: ["https://flower-shop-frontned.vercel.app", "http://localhost:5173"],
+  credentials: true
+}));
 app.use(express.json());
 
 // LOGIN
