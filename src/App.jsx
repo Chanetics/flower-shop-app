@@ -340,6 +340,120 @@ const CartView = ({ cart, updateQty, cartTotal, cartQty, grandTotal, deliveryFee
   );
 };
 
+// ── SUPPORT VIEW (outside App to fix focus) ───────────
+const SupportView = ({ API, user, supportSubj, setSupportSubj, supportMsg, setSupportMsg, tickets, setTickets, showAlert }) => {
+  const submitTicket = async () => {
+    if (!supportMsg.trim()) return showAlert("Please enter a message.", "error");
+    if (!supportSubj || supportSubj === "Select topic") return showAlert("Please select a topic.", "error");
+    const ticketId = "TKT-" + Date.now();
+    const payload = {
+      id: ticketId,
+      userId: user ? user.id : null,
+      userName: user ? user.name : "Guest",
+      userEmail: user ? user.email : "guest@unknown.com",
+      subject: supportSubj,
+      message: supportMsg,
+      status: "Open"
+    };
+    try {
+      const res = await fetch(`${API}/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Server error");
+      setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
+      setSupportMsg(""); setSupportSubj("Select topic");
+      showAlert("Ticket submitted! We'll respond within 24 hours. 🌸");
+    } catch {
+      // Fallback: save locally if backend /tickets not ready yet
+      setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
+      setSupportMsg(""); setSupportSubj("Select topic");
+      showAlert("Ticket submitted! We'll respond within 24 hours. 🌸");
+    }
+  };
+
+  return (
+    <div>
+      <div className="section-title">Customer Support</div>
+      <div className="section-sub">We're here to help you</div>
+      <div className="support-grid">
+        <div className="support-opt">
+          <div className="support-opt-icon">📞</div>
+          <div className="support-opt-label">Call Us</div>
+          <a href="tel:09456475556" style={{ fontSize: 12, color: "var(--text3)", marginTop: 4, display: "block", textDecoration: "none" }}>
+            09456475556
+          </a>
+        </div>
+        <div className="support-opt">
+          <div className="support-opt-icon">📧</div>
+          <div className="support-opt-label">Email</div>
+          <a href="mailto:Chanetics@gmail.com" style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
+            Chanetics@gmail.com
+          </a>
+        </div>
+        <div className="support-opt">
+          <div className="support-opt-icon">📘</div>
+          <div className="support-opt-label">Facebook</div>
+          <a href="https://www.facebook.com/Kristian.Raganas" target="_blank" rel="noreferrer"
+            style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
+            Kristian Raganas
+          </a>
+        </div>
+      </div>
+
+      <div className="card">
+        {/* Logo banner */}
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <img src={LOGO} alt="JM Flower Shop" style={{ width: 72, height: 72, objectFit: "contain", filter: "drop-shadow(0 0 10px rgba(201,168,76,0.4))" }} />
+          <div style={{ fontFamily: "Playfair Display,serif", color: "var(--gold)", fontSize: 16, fontWeight: 700, marginTop: 6 }}>JM Flower Shop</div>
+          <div style={{ fontSize: 11, color: "var(--text3)", letterSpacing: 2, textTransform: "uppercase" }}>premium florist</div>
+          <div style={{ width: 40, height: 1, background: "linear-gradient(90deg,transparent,var(--gold),transparent)", margin: "10px auto 0" }} />
+        </div>
+
+        <h3 style={{ fontFamily: "Playfair Display,serif", marginBottom: 18, color: "var(--gold)" }}>Send a Message</h3>
+        <div className="form-group">
+          <label>Subject</label>
+          <select value={supportSubj} onChange={e => setSupportSubj(e.target.value)}>
+            {["Select topic", "Order Issue", "Delivery Problem", "Product Inquiry", "Return/Refund", "Other"].map(s => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Message</label>
+          <textarea
+            placeholder="Describe your concern in detail..."
+            style={{ minHeight: 140 }}
+            value={supportMsg}
+            onChange={e => setSupportMsg(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <button className="btn btn-primary" onClick={submitTicket}>Submit Ticket 🌹</button>
+
+        {tickets.length > 0 && (
+          <div style={{ marginTop: 26 }}>
+            <div style={{ width: "100%", height: 1, background: "linear-gradient(90deg,transparent,var(--border-gold),transparent)", margin: "0 0 18px" }} />
+            <h4 style={{ marginBottom: 12, fontWeight: 600, color: "var(--gold)", fontFamily: "Playfair Display,serif" }}>Your Submitted Tickets</h4>
+            {tickets.map(t => (
+              <div key={t.id} style={{ padding: 14, background: "var(--black-soft)", border: "1px solid var(--border-gold)", borderRadius: 10, marginBottom: 12, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontWeight: 600, color: "var(--gold)", fontSize: 11 }}>{t.id}</span>
+                  <span className="badge badge-occ">{t.status}</span>
+                </div>
+                <div style={{ fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>{t.subject || t.subj}</div>
+                <div style={{ color: "var(--text2)", lineHeight: 1.5 }}>{t.message || t.msg}</div>
+                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>📅 {t.date}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ── MAIN APP ───────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
@@ -685,101 +799,6 @@ export default function App() {
     );
   };
 
-  // ── SUPPORT VIEW ───────────────────────────────────────
-  const SupportView = () => {
-    const submitTicket = async () => {
-      if (!supportMsg) return showAlert("Please enter a message.", "error");
-      if (!supportSubj || supportSubj === "Select topic") return showAlert("Please select a topic.", "error");
-      const ticketId = "TKT-" + Date.now();
-      const payload = {
-        id: ticketId,
-        userId: user ? user.id : null,
-        userName: user ? user.name : "Guest",
-        userEmail: user ? user.email : "guest@unknown.com",
-        subject: supportSubj,
-        message: supportMsg,
-        status: "Open"
-      };
-      try {
-        const res = await fetch(`${API}/tickets`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error("Server error");
-        setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
-        setSupportMsg(""); setSupportSubj("");
-        showAlert("Support ticket submitted! We'll respond within 24 hours.");
-      } catch {
-        // fallback: save locally if backend doesn't have /tickets yet
-        setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
-        setSupportMsg(""); setSupportSubj("");
-        showAlert("Ticket submitted! We'll respond within 24 hours.");
-      }
-    };
-
-    return (
-      <div>
-        <div className="section-title">Customer Support</div>
-        <div className="section-sub">We're here to help you</div>
-        <div className="support-grid">
-          <div className="support-opt">
-            <div className="support-opt-icon">📞</div>
-            <div className="support-opt-label">Call Us</div>
-            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>09456475556</div>
-          </div>
-          <div className="support-opt">
-            <div className="support-opt-icon">📧</div>
-            <div className="support-opt-label">Email</div>
-            <a href="mailto:Chanetics@gmail.com" style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
-              Chanetics@gmail.com
-            </a>
-          </div>
-          <div className="support-opt">
-            <div className="support-opt-icon">💬</div>
-            <div className="support-opt-label">Facebook</div>
-            <a href="https://www.facebook.com/Kristian.Raganas" target="_blank" rel="noreferrer"
-              style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
-              Kristian Raganas
-            </a>
-          </div>
-        </div>
-        <div className="card">
-          <h3 style={{ fontFamily: "Playfair Display,serif", marginBottom: 18, color: "var(--gold)" }}>Send a Message</h3>
-          <div className="form-group"><label>Subject</label>
-            <select value={supportSubj} onChange={e => setSupportSubj(e.target.value)}>
-              {["Select topic", "Order Issue", "Delivery Problem", "Product Inquiry", "Return/Refund", "Other"].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="form-group"><label>Message</label>
-            <textarea
-              placeholder="Describe your concern..."
-              style={{ minHeight: 120 }}
-              value={supportMsg}
-              onChange={e => setSupportMsg(e.target.value)}
-            />
-          </div>
-          <button className="btn btn-primary" onClick={submitTicket}>Submit Ticket</button>
-          {tickets.length > 0 && (
-            <div style={{ marginTop: 22 }}>
-              <h4 style={{ marginBottom: 12, fontWeight: 600, color: "var(--gold)" }}>Your Submitted Tickets</h4>
-              {tickets.map(t => (
-                <div key={t.id} style={{ padding: 12, background: "var(--black-soft)", border: "1px solid var(--border-gold)", borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600, color: "var(--gold)", fontSize: 12 }}>{t.id}</span>
-                    <span className="badge badge-occ">{t.status}</span>
-                  </div>
-                  <div style={{ fontWeight: 500, color: "var(--text)", marginBottom: 3 }}>{t.subject || t.subj}</div>
-                  <div style={{ color: "var(--text2)" }}>{t.message || t.msg}</div>
-                  <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>{t.date}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   // ── MAIN RENDER ────────────────────────────────────────
   return (
@@ -855,7 +874,19 @@ export default function App() {
           )}
           {view === "orders" && user && <OrdersView />}
           {view === "admin" && user?.role === "admin" && <AdminView />}
-          {view === "support" && <SupportView />}
+          {view === "support" && (
+            <SupportView
+              API={API}
+              user={user}
+              supportSubj={supportSubj}
+              setSupportSubj={setSupportSubj}
+              supportMsg={supportMsg}
+              setSupportMsg={setSupportMsg}
+              tickets={tickets}
+              setTickets={setTickets}
+              showAlert={showAlert}
+            />
+          )}
         </div>
 
         {modal === "login" && (
