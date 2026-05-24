@@ -8,9 +8,18 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Verify connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Gmail connection failed:", error);
+  } else {
+    console.log("✅ Gmail connected and ready to send!");
+  }
+});
+
 const sendDeliveredEmail = async (toEmail, customerName, orderId, total) => {
   const mailOptions = {
-    from: `"Your Flower Shop 🌸" <${process.env.GMAIL_USER}>`,
+    from: `"JM Flower Shop 🌸" <${process.env.GMAIL_USER}>`,
     to: toEmail,
     subject: `Your Order ${orderId} Has Been Delivered! 🌺`,
     html: `
@@ -28,7 +37,10 @@ const sendDeliveredEmail = async (toEmail, customerName, orderId, total) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  const info = await transporter.sendMail(mailOptions);
+  console.log("📧 Message ID:", info.messageId);
+  console.log("📧 Response:", info.response);
+  return info;
 };
 
 module.exports = { sendDeliveredEmail };
