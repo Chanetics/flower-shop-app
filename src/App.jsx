@@ -379,10 +379,25 @@ export default function App() {
         <div className="section-title">Our Collection</div>
         <div className="section-sub">{filtered.length} premium arrangement{filtered.length !== 1 ? "s" : ""} available</div>
         <div className="filter-bar">
-          <input placeholder="Search arrangements..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)}>{cats.map(c => <option key={c}>{c}</option>)}</select>
-          <select value={filterOcc} onChange={e => setFilterOcc(e.target.value)}>{occs.map(o => <option key={o}>{o}</option>)}</select>
-          <input placeholder="Max price ₱" value={filterMax} onChange={e => setFilterMax(e.target.value)} style={{maxWidth:130}} />
+          <input
+            placeholder="Search arrangements..."
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            autoComplete="off"
+          />
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+            {cats.map(c => <option key={c}>{c}</option>)}
+          </select>
+          <select value={filterOcc} onChange={e => setFilterOcc(e.target.value)}>
+            {occs.map(o => <option key={o}>{o}</option>)}
+          </select>
+          <input
+            placeholder="Max price ₱"
+            value={filterMax}
+            onChange={e => setFilterMax(e.target.value)}
+            style={{maxWidth:130}}
+            autoComplete="off"
+          />
         </div>
         {filtered.length === 0
           ? <div className="empty"><div className="empty-icon">🌿</div><p>No arrangements found</p></div>
