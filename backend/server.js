@@ -84,20 +84,41 @@ app.delete("/products/:id", (req, res) => {
   });
 });
 
-app.post("/orders", (req, res) => {
-  const { id, userId, userName, userEmail, items, subtotal, deliveryFee, total, deliveryType, deliveryDate, deliveryTime, deliveryAddr, giftNote } = req.body;
-  if (!id || !userId || !items) return res.status(400).json({ message: "Missing required order fields" });
-  const values = [id, userId, userName || "", userEmail || "", JSON.stringify(items), subtotal || 0, deliveryFee || 0, total || 0, deliveryType || "delivery", deliveryDate || "", deliveryTime || "", deliveryAddr || "", giftNote || ""];
-  db.query(
-    `INSERT INTO orders (id, user_id, user_name, user_email, items, subtotal, delivery_fee, total, delivery_type, delivery_date, delivery_time, delivery_address, gift_note, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'Pending')`,
-    values,
-    (err) => {
-      if (err) return res.status(500).json({ message: "Failed to save order", error: err.message });
-      res.json({ message: "Order placed successfully", orderId: id });
-    }
-  );
-});
+app.put("/orders/:id/status", (req, res) => {
+  const { status } = req.body;
+  const orderId = req.params.id;
 
+  console.log("🔔 Status update received:", orderId, "→", status);
+
+  db.query("UPDATE orders SET status = ? WHERE id = ?", [status, orderId], (err) => {
+    if (err) {
+      console.error("❌ DB error:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+
+    console.log("✅ DB updated successfully");
+
+    if (status === "Delivered") {
+      console.log("📧 Attempting to send email...");
+      db.query("SELECT user_name, user_email, total FROM orders WHERE id = ?", [orderId], (err, results) => {
+        if (err) {
+          console.error("❌ Query error:", err);
+          return;
+        }
+        console.log("📋 Order data:", results);
+        if (results.length > 0) {
+          const { user_name, user_email, total } = results[0];
+          console.log("📨 Sending email to:", user_email);
+          sendDeliveredEmail(user_email, user_name, orderId, total)
+            .then(() => console.log("✅ Email sent to", user_email))
+            .catch((e) => console.error("❌ Email error:", e));
+        }
+      });
+    }
+
+    res.json({ message: "Status updated" });
+  });
+});
 app.get("/orders", (req, res) => {
   db.query("SELECT * FROM orders ORDER BY created_at DESC", (err, results) => {
     if (err) return res.status(500).json({ message: "Server error" });
