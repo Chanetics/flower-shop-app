@@ -351,209 +351,184 @@ export default function App() {
     } catch { showAlert("Failed to save.", "error"); }
   };
 
-  // ── SHOP VIEW ──────────────────────────────────────────
-  const ShopView = () => {
-    const cats = ["All", ...new Set(products.map(p => p.category).filter(Boolean))];
-    const occs = ["All", ...new Set(products.map(p => p.occasion).filter(Boolean))];
-    const maxP = filterMax ? +filterMax : Infinity;
-    const filtered = products.filter(p =>
-      (!searchQ || p.name.toLowerCase().includes(searchQ.toLowerCase()) || (p.description||"").toLowerCase().includes(searchQ.toLowerCase()))
-      && (filterCat === "All" || p.category === filterCat)
-      && (filterOcc === "All" || p.occasion === filterOcc)
-      && parseFloat(p.price) <= maxP
-    );
-    return (
-      <div>
-        {!user && (
-          <div className="hero">
-            <img src={LOGO} alt="JM Flower Shop" className="hero-logo" />
-            <div className="hero-title">JM Flower Shop</div>
-            <div className="hero-divider"></div>
-            <div className="hero-sub">Premium blooms for every special moment — delivered with elegance</div>
-            <div className="hero-btns">
-              <button className="btn btn-primary" onClick={() => setModal("register")}>Shop Now</button>
-              <button className="btn btn-secondary" onClick={() => setModal("login")}>Sign In</button>
-            </div>
+ // ── SHOP VIEW (outside App to fix focus) ──
+const ShopView = ({ products, searchQ, setSearchQ, filterCat, setFilterCat,
+                    filterOcc, setFilterOcc, filterMax, setFilterMax,
+                    user, setModal, addToCart }) => {
+  const cats = ["All", ...new Set(products.map(p => p.category).filter(Boolean))];
+  const occs = ["All", ...new Set(products.map(p => p.occasion).filter(Boolean))];
+  const maxP = filterMax ? +filterMax : Infinity;
+  const filtered = products.filter(p =>
+    (!searchQ || p.name.toLowerCase().includes(searchQ.toLowerCase()) || (p.description||"").toLowerCase().includes(searchQ.toLowerCase()))
+    && (filterCat === "All" || p.category === filterCat)
+    && (filterOcc === "All" || p.occasion === filterOcc)
+    && parseFloat(p.price) <= maxP
+  );
+  return (
+    <div>
+      {!user && (
+        <div className="hero">
+          <img src={LOGO} alt="JM Flower Shop" className="hero-logo" />
+          <div className="hero-title">JM Flower Shop</div>
+          <div className="hero-divider"></div>
+          <div className="hero-sub">Premium blooms for every special moment — delivered with elegance</div>
+          <div className="hero-btns">
+            <button className="btn btn-primary" onClick={() => setModal("register")}>Shop Now</button>
+            <button className="btn btn-secondary" onClick={() => setModal("login")}>Sign In</button>
           </div>
-        )}
-        <div className="section-title">Our Collection</div>
-        <div className="section-sub">{filtered.length} premium arrangement{filtered.length !== 1 ? "s" : ""} available</div>
-        <div className="filter-bar">
-          <input
-            placeholder="Search arrangements..."
-            value={searchQ}
-            onChange={e => setSearchQ(e.target.value)}
-            autoComplete="off"
-          />
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)}>
-            {cats.map(c => <option key={c}>{c}</option>)}
-          </select>
-          <select value={filterOcc} onChange={e => setFilterOcc(e.target.value)}>
-            {occs.map(o => <option key={o}>{o}</option>)}
-          </select>
-          <input
-            placeholder="Max price ₱"
-            value={filterMax}
-            onChange={e => setFilterMax(e.target.value)}
-            style={{maxWidth:130}}
-            autoComplete="off"
-          />
         </div>
-        {filtered.length === 0
-          ? <div className="empty"><div className="empty-icon">🌿</div><p>No arrangements found</p></div>
-          : <div className="product-grid">{filtered.map(p => (
-              <div className="product-card" key={p.id}>
-                <div className="product-img">{p.emoji}</div>
-                <div className="product-info">
-                  <span className="badge badge-cat">{p.category}</span>
-                  <span className="badge badge-occ">{p.occasion}</span>
-                  <div className="product-name">{p.name}</div>
-                  <div className="product-desc">{p.description}</div>
-                  <div className="product-price">₱{parseFloat(p.price).toLocaleString()}</div>
-                  <div className={`product-stock ${p.stock===0?"out":p.stock<=3?"low":""}`}>
-                    {p.stock===0?"Out of stock":p.stock<=3?`Only ${p.stock} left`:`${p.stock} in stock`}
-                  </div>
-                  <button className="btn btn-primary btn-full btn-sm" disabled={p.stock===0} onClick={() => addToCart(p)}>
-                    {p.stock===0?"Out of Stock":"Add to Cart"}
-                  </button>
+      )}
+      <div className="section-title">Our Collection</div>
+      <div className="section-sub">{filtered.length} premium arrangement{filtered.length !== 1 ? "s" : ""} available</div>
+      <div className="filter-bar">
+        <input
+          placeholder="Search arrangements..."
+          value={searchQ}
+          onChange={e => setSearchQ(e.target.value)}
+          autoComplete="off"
+        />
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+          {cats.map(c => <option key={c}>{c}</option>)}
+        </select>
+        <select value={filterOcc} onChange={e => setFilterOcc(e.target.value)}>
+          {occs.map(o => <option key={o}>{o}</option>)}
+        </select>
+        <input
+          placeholder="Max price ₱"
+          value={filterMax}
+          onChange={e => setFilterMax(e.target.value)}
+          style={{maxWidth:130}}
+          autoComplete="off"
+        />
+      </div>
+      {filtered.length === 0
+        ? <div className="empty"><div className="empty-icon">🌿</div><p>No arrangements found</p></div>
+        : <div className="product-grid">{filtered.map(p => (
+            <div className="product-card" key={p.id}>
+              <div className="product-img">{p.emoji}</div>
+              <div className="product-info">
+                <span className="badge badge-cat">{p.category}</span>
+                <span className="badge badge-occ">{p.occasion}</span>
+                <div className="product-name">{p.name}</div>
+                <div className="product-desc">{p.description}</div>
+                <div className="product-price">₱{parseFloat(p.price).toLocaleString()}</div>
+                <div className={`product-stock ${p.stock===0?"out":p.stock<=3?"low":""}`}>
+                  {p.stock===0?"Out of stock":p.stock<=3?`Only ${p.stock} left`:`${p.stock} in stock`}
                 </div>
+                <button className="btn btn-primary btn-full btn-sm" disabled={p.stock===0} onClick={() => addToCart(p)}>
+                  {p.stock===0?"Out of Stock":"Add to Cart"}
+                </button>
               </div>
-            ))}</div>
-        }
-      </div>
-    );
-  };
-
-  // ── CART VIEW ──────────────────────────────────────────
-  const CartView = () => {
-    if (cart.length === 0) return (
-      <div className="empty"><div className="empty-icon">🛒</div><p>Your cart is empty</p>
-        <button className="btn btn-primary" onClick={() => setView("shop")}>Browse Collection</button>
-      </div>
-    );
-    if (checkoutStep === 2) return (
-      <div>
-        <div className="section-title">Checkout</div>
-        <div className="section-sub">Complete your order details</div>
-        <div className="card">
-          <h3 style={{fontFamily:"Playfair Display,serif",marginBottom:16,color:"var(--gold)"}}>Delivery Options</h3>
-          <div className="delivery-options">
-            {[["delivery","🚚","Home Delivery","+₱150 fee"],["pickup","🏪","Store Pickup","Free"]].map(([type,icon,label,sub]) => (
-              <div key={type} className={`delivery-opt ${deliveryType===type?"selected":""}`} onClick={() => setDeliveryType(type)}>
-                <div className="delivery-opt-icon">{icon}</div>
-                <div className="delivery-opt-label">{label}</div>
-                <div className="delivery-opt-price">{sub}</div>
-              </div>
-            ))}
-          </div>
-          <div className="form-group"><label>Preferred Date</label>
-            <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} min={new Date().toISOString().split("T")[0]} />
-          </div>
-          <div className="form-group"><label>Preferred Time</label>
-            <select value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)}>
-              {["","8:00 AM - 10:00 AM","10:00 AM - 12:00 PM","12:00 PM - 2:00 PM","2:00 PM - 4:00 PM","4:00 PM - 6:00 PM"].map(t => <option key={t} value={t}>{t||"Select time slot"}</option>)}
-            </select>
-          </div>
-          {deliveryType==="delivery" && (
-            <div className="form-group"><label>Delivery Address</label>
-              <textarea placeholder="Enter full delivery address..." value={deliveryAddr} onChange={e => setDeliveryAddr(e.target.value)} />
             </div>
-          )}
-          <div className="form-group"><label>Gift Note (optional)</label>
-            <textarea placeholder="Add a personal message..." value={giftNote} onChange={e => setGiftNote(e.target.value)} />
-          </div>
-          <div className="gold-line"></div>
-          <h3 style={{fontFamily:"Playfair Display,serif",marginBottom:14,color:"var(--gold)"}}>Payment Method</h3>
-          <div className="delivery-options" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
-            {[["💵","Cash on Delivery","Pay when received"],["💳","Credit/Debit Card","Visa, Mastercard"],["📱","E-Wallet","GoPay, Maya, etc"]].map(([icon,label,sub]) => (
-              <div key={label} className="delivery-opt selected" style={{cursor:"default"}}>
-                <div className="delivery-opt-icon">{icon}</div>
-                <div className="delivery-opt-label">{label}</div>
-                <div className="delivery-opt-price">{sub}</div>
-              </div>
-            ))}
-          </div>
-          <div className="cart-total">
-            <div className="cart-total-row"><span>Subtotal</span><span>₱{cartTotal().toLocaleString()}</span></div>
-            <div className="cart-total-row"><span>Delivery fee</span><span>₱{deliveryFee().toLocaleString()}</span></div>
-            <div className="cart-total-row grand"><span>Total</span><span>₱{grandTotal().toLocaleString()}</span></div>
-          </div>
-          <div style={{display:"flex",gap:10,marginTop:18}}>
-            <button className="btn btn-secondary" onClick={() => setCheckoutStep(1)}>Back</button>
-            <button className="btn btn-primary" style={{flex:1}} onClick={checkout} disabled={loading}>{loading?"Placing Order...":"Place Order 🌹"}</button>
-          </div>
-        </div>
-      </div>
-    );
-    return (
-      <div>
-        <div className="section-title">Your Cart</div>
-        <div className="section-sub">{cartQty()} item{cartQty()!==1?"s":""}</div>
-        <div className="card">
-          {cart.map(c => (
-            <div className="cart-item" key={c.id}>
-              <div className="cart-emoji">{c.emoji}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:500,fontSize:14,color:"var(--text)"}}>{c.name}</div>
-                <div style={{fontSize:13,color:"var(--text3)"}}>₱{parseFloat(c.price).toLocaleString()} each</div>
-              </div>
-              <div className="qty-ctrl">
-                <button className="qty-btn" onClick={() => updateQty(c.id,-1)}>−</button>
-                <span style={{fontSize:14,fontWeight:600,minWidth:24,textAlign:"center",color:"var(--gold)"}}>{c.qty}</span>
-                <button className="qty-btn" onClick={() => updateQty(c.id,1)}>+</button>
-              </div>
-              <div style={{minWidth:80,textAlign:"right",fontWeight:600,color:"var(--gold)",fontFamily:"Playfair Display,serif"}}>₱{(parseFloat(c.price)*c.qty).toLocaleString()}</div>
+          ))}</div>
+      }
+    </div>
+  );
+};
+
+// ── CART VIEW (outside App to fix delivery address focus) ──
+const CartView = ({ cart, updateQty, cartTotal, cartQty, grandTotal, deliveryFee,
+                    checkoutStep, setCheckoutStep, deliveryType, setDeliveryType,
+                    deliveryDate, setDeliveryDate, deliveryTime, setDeliveryTime,
+                    deliveryAddr, setDeliveryAddr, giftNote, setGiftNote,
+                    checkout, loading, setView }) => {
+  if (cart.length === 0) return (
+    <div className="empty"><div className="empty-icon">🛒</div><p>Your cart is empty</p>
+      <button className="btn btn-primary" onClick={() => setView("shop")}>Browse Collection</button>
+    </div>
+  );
+  if (checkoutStep === 2) return (
+    <div>
+      <div className="section-title">Checkout</div>
+      <div className="section-sub">Complete your order details</div>
+      <div className="card">
+        <h3 style={{fontFamily:"Playfair Display,serif",marginBottom:16,color:"var(--gold)"}}>Delivery Options</h3>
+        <div className="delivery-options">
+          {[["delivery","🚚","Home Delivery","+₱150 fee"],["pickup","🏪","Store Pickup","Free"]].map(([type,icon,label,sub]) => (
+            <div key={type} className={`delivery-opt ${deliveryType===type?"selected":""}`} onClick={() => setDeliveryType(type)}>
+              <div className="delivery-opt-icon">{icon}</div>
+              <div className="delivery-opt-label">{label}</div>
+              <div className="delivery-opt-price">{sub}</div>
             </div>
           ))}
-          <div className="cart-total">
-            <div className="cart-total-row grand"><span>Subtotal</span><span>₱{cartTotal().toLocaleString()}</span></div>
+        </div>
+        <div className="form-group"><label>Preferred Date</label>
+          <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+        </div>
+        <div className="form-group"><label>Preferred Time</label>
+          <select value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)}>
+            {["","8:00 AM - 10:00 AM","10:00 AM - 12:00 PM","12:00 PM - 2:00 PM","2:00 PM - 4:00 PM","4:00 PM - 6:00 PM"].map(t => <option key={t} value={t}>{t||"Select time slot"}</option>)}
+          </select>
+        </div>
+        {deliveryType==="delivery" && (
+          <div className="form-group"><label>Delivery Address</label>
+            <textarea
+              placeholder="Enter full delivery address..."
+              value={deliveryAddr}
+              onChange={e => setDeliveryAddr(e.target.value)}
+              autoComplete="off"
+            />
           </div>
-          <button className="btn btn-primary btn-full" style={{marginTop:18}} onClick={() => setCheckoutStep(2)}>Proceed to Checkout</button>
+        )}
+        <div className="form-group"><label>Gift Note (optional)</label>
+          <textarea
+            placeholder="Add a personal message..."
+            value={giftNote}
+            onChange={e => setGiftNote(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div className="gold-line"></div>
+        <h3 style={{fontFamily:"Playfair Display,serif",marginBottom:14,color:"var(--gold)"}}>Payment Method</h3>
+        <div className="delivery-options" style={{gridTemplateColumns:"1fr 1fr 1fr"}}>
+          {[["💵","Cash on Delivery","Pay when received"],["💳","Credit/Debit Card","Visa, Mastercard"],["📱","E-Wallet","GoPay, Maya, etc"]].map(([icon,label,sub]) => (
+            <div key={label} className="delivery-opt selected" style={{cursor:"default"}}>
+              <div className="delivery-opt-icon">{icon}</div>
+              <div className="delivery-opt-label">{label}</div>
+              <div className="delivery-opt-price">{sub}</div>
+            </div>
+          ))}
+        </div>
+        <div className="cart-total">
+          <div className="cart-total-row"><span>Subtotal</span><span>₱{cartTotal().toLocaleString()}</span></div>
+          <div className="cart-total-row"><span>Delivery fee</span><span>₱{deliveryFee().toLocaleString()}</span></div>
+          <div className="cart-total-row grand"><span>Total</span><span>₱{grandTotal().toLocaleString()}</span></div>
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:18}}>
+          <button className="btn btn-secondary" onClick={() => setCheckoutStep(1)}>Back</button>
+          <button className="btn btn-primary" style={{flex:1}} onClick={checkout} disabled={loading}>{loading?"Placing Order...":"Place Order 🌹"}</button>
         </div>
       </div>
-    );
-  };
-
-  // ── ORDERS VIEW ────────────────────────────────────────
-  const OrdersView = () => {
-    if (orders.length === 0) return (
-      <div className="empty"><div className="empty-icon">📦</div><p>No orders yet</p>
-        <button className="btn btn-primary" onClick={() => setView("shop")}>Start Shopping</button>
-      </div>
-    );
-    return (
-      <div>
-        <div className="section-title">My Orders</div>
-        <div className="section-sub">Track your flower deliveries</div>
-        {orders.map(order => {
-          const si = STATUS_STEPS.indexOf(order.status);
-          const items = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
-          return (
-            <div className="order-card" key={order.id}>
-              <div className="order-header">
-                <div>
-                  <div style={{fontWeight:600,marginBottom:3,color:"var(--gold)",fontSize:14}}>{order.id}</div>
-                  <div style={{fontSize:12,color:"var(--text3)"}}>₱{parseFloat(order.total).toLocaleString()} · {order.delivery_type==="pickup"?"Store Pickup":"Delivery"} · {order.delivery_date}</div>
-                </div>
-                <span className={`status-badge status-${order.status==="Out for Delivery"?"Out":order.status}`}>{order.status}</span>
-              </div>
-              <div className="track-bar">
-                {STATUS_STEPS.map((step, i) => (
-                  <div className="track-step" key={step}>
-                    {i < STATUS_STEPS.length-1 && <div className={`track-line ${si>i?"done":""}`} />}
-                    <div className={`track-dot ${si>i?"done":si===i?"current":""}`} />
-                    <div className={`track-label ${si>i?"done":si===i?"current":""}`}>{step}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{fontSize:13,color:"var(--text2)",marginTop:10}}>{items.map(i => `${i.emoji} ${i.name} x${i.qty}`).join(", ")}</div>
-              {order.gift_note && <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",marginTop:6}}>🌸 "{order.gift_note}"</div>}
+    </div>
+  );
+  return (
+    <div>
+      <div className="section-title">Your Cart</div>
+      <div className="section-sub">{cartQty()} item{cartQty()!==1?"s":""}</div>
+      <div className="card">
+        {cart.map(c => (
+          <div className="cart-item" key={c.id}>
+            <div className="cart-emoji">{c.emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:500,fontSize:14,color:"var(--text)"}}>{c.name}</div>
+              <div style={{fontSize:13,color:"var(--text3)"}}>₱{parseFloat(c.price).toLocaleString()} each</div>
             </div>
-          );
-        })}
+            <div className="qty-ctrl">
+              <button className="qty-btn" onClick={() => updateQty(c.id,-1)}>−</button>
+              <span style={{fontSize:14,fontWeight:600,minWidth:24,textAlign:"center",color:"var(--gold)"}}>{c.qty}</span>
+              <button className="qty-btn" onClick={() => updateQty(c.id,1)}>+</button>
+            </div>
+            <div style={{minWidth:80,textAlign:"right",fontWeight:600,color:"var(--gold)",fontFamily:"Playfair Display,serif"}}>₱{(parseFloat(c.price)*c.qty).toLocaleString()}</div>
+          </div>
+        ))}
+        <div className="cart-total">
+          <div className="cart-total-row grand"><span>Subtotal</span><span>₱{cartTotal().toLocaleString()}</span></div>
+        </div>
+        <button className="btn btn-primary btn-full" style={{marginTop:18}} onClick={() => setCheckoutStep(2)}>Proceed to Checkout</button>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   // ── ADMIN VIEW ─────────────────────────────────────────
   const AdminView = () => {
@@ -722,7 +697,24 @@ export default function App() {
         <div className="main">
           {alert && <div className={`alert ${alert.type}`}>{alert.msg}</div>}
           {view==="shop" && <ShopView />}
+  products={products} searchQ={searchQ} setSearchQ={setSearchQ}
+  filterCat={filterCat} setFilterCat={setFilterCat}
+  filterOcc={filterOcc} setFilterOcc={setFilterOcc}
+  filterMax={filterMax} setFilterMax={setFilterMax}
+  user={user} setModal={setModal} addToCart={addToCart}
+/
           {view==="cart" && <CartView />}
+           cart={cart} updateQty={updateQty}
+  cartTotal={cartTotal} cartQty={cartQty}
+  grandTotal={grandTotal} deliveryFee={deliveryFee}
+  checkoutStep={checkoutStep} setCheckoutStep={setCheckoutStep}
+  deliveryType={deliveryType} setDeliveryType={setDeliveryType}
+  deliveryDate={deliveryDate} setDeliveryDate={setDeliveryDate}
+  deliveryTime={deliveryTime} setDeliveryTime={setDeliveryTime}
+  deliveryAddr={deliveryAddr} setDeliveryAddr={setDeliveryAddr}
+  giftNote={giftNote} setGiftNote={setGiftNote}
+  checkout={checkout} loading={loading} setView={setView}
+/
           {view==="orders" && user && <OrdersView />}
           {view==="admin" && user?.role==="admin" && <AdminView />}
           {view==="support" && <SupportView />}
