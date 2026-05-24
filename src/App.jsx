@@ -351,6 +351,7 @@ export default function App() {
   const [orders, setOrders] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
   const [users, setUsers] = useState([]);
+  const [allTickets, setAllTickets] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Filter state lives in App so ShopView can be a stable component
@@ -402,6 +403,10 @@ export default function App() {
 
   const fetchUsers = async () => {
     try { const res = await fetch(`${API}/users`); setUsers(await res.json()); } catch { }
+  };
+
+  const fetchAllTickets = async () => {
+    try { const res = await fetch(`${API}/tickets`); setAllTickets(await res.json()); } catch { }
   };
 
   const showAlert = (msg, type = "success") => {
@@ -564,13 +569,13 @@ export default function App() {
         <div className="section-title">Admin Dashboard</div>
         <div className="section-sub">Manage your flower shop</div>
         <div className="stats-grid">
-          {[["₱" + revenue.toLocaleString(), "Total Revenue"], [String(allOrders.length), "Total Orders"], [String(products.length), "Products"], [String(users.filter(u => u.role === "customer").length), "Customers"]].map(([n, l]) => (
+          {[["₱" + revenue.toLocaleString(), "Total Revenue"], [String(allOrders.length), "Total Orders"], [String(products.length), "Products"], [String(allTickets.length), "Support Tickets"]].map(([n, l]) => (
             <div className="stat-card" key={l}><div className="stat-num">{n}</div><div className="stat-label">{l}</div></div>
           ))}
         </div>
         <div className="tabs">
-          {["products", "orders", "users"].map(t => (
-            <button key={t} className={`tab ${adminTab === t ? "active" : ""}`} onClick={() => { setAdminTab(t); if (t === "orders") fetchAllOrders(); if (t === "users") fetchUsers(); }}>
+          {["products", "orders", "users", "tickets"].map(t => (
+            <button key={t} className={`tab ${adminTab === t ? "active" : ""}`} onClick={() => { setAdminTab(t); if (t === "orders") fetchAllOrders(); if (t === "users") fetchUsers(); if (t === "tickets") fetchAllTickets(); }}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
@@ -644,52 +649,137 @@ export default function App() {
             ))}</tbody>
           </table>
         </div>}
+        {adminTab === "tickets" && <div className="card">
+          {allTickets.length === 0
+            ? <div className="empty"><div className="empty-icon">🎫</div><p>No support tickets yet</p></div>
+            : <table className="admin-table">
+              <thead><tr>{["Ticket ID", "Customer", "Email", "Subject", "Message", "Status", "Update"].map(c => <th key={c}>{c}</th>)}</tr></thead>
+              <tbody>{allTickets.map(t => (
+                <tr key={t.id}>
+                  <td style={{ color: "var(--gold)", fontSize: 11 }}>{t.id}</td>
+                  <td style={{ color: "var(--text)" }}>{t.user_name || "Guest"}</td>
+                  <td style={{ fontSize: 12 }}>{t.user_email || "—"}</td>
+                  <td>{t.subject || "—"}</td>
+                  <td style={{ maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.message}</td>
+                  <td><span className={`status-badge ${t.status === "Open" ? "status-Pending" : t.status === "Resolved" ? "status-Delivered" : "status-Processing"}`}>{t.status}</span></td>
+                  <td>
+                    <select
+                      style={{ fontSize: 12, padding: "5px 8px", border: "1px solid var(--border-gold)", borderRadius: 6, background: "var(--black-soft)", color: "var(--text)" }}
+                      value={t.status}
+                      onChange={async e => {
+                        try {
+                          await fetch(`${API}/tickets/${t.id}/status`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: e.target.value }) });
+                          fetchAllTickets();
+                        } catch { showAlert("Failed to update ticket.", "error"); }
+                      }}
+                    >
+                      {["Open", "In Progress", "Resolved"].map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          }
+        </div>}
       </div>
     );
   };
 
   // ── SUPPORT VIEW ───────────────────────────────────────
-  const SupportView = () => (
-    <div>
-      <div className="section-title">Customer Support</div>
-      <div className="section-sub">We're here to help you</div>
-      <div className="support-grid">
-        {[["📞", "Call Us", "0917-XXX-XXXX"], ["📧", "Email", "support@jmflowers.com"], ["💬", "Live Chat", "Available 9AM–6PM"]].map(([icon, label, sub]) => (
-          <div className="support-opt" key={label}>
-            <div className="support-opt-icon">{icon}</div>
-            <div className="support-opt-label">{label}</div>
-            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>{sub}</div>
+  const SupportView = () => {
+    const submitTicket = async () => {
+      if (!supportMsg) return showAlert("Please enter a message.", "error");
+      if (!supportSubj || supportSubj === "Select topic") return showAlert("Please select a topic.", "error");
+      const ticketId = "TKT-" + Date.now();
+      const payload = {
+        id: ticketId,
+        userId: user ? user.id : null,
+        userName: user ? user.name : "Guest",
+        userEmail: user ? user.email : "guest@unknown.com",
+        subject: supportSubj,
+        message: supportMsg,
+        status: "Open"
+      };
+      try {
+        const res = await fetch(`${API}/tickets`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error("Server error");
+        setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
+        setSupportMsg(""); setSupportSubj("");
+        showAlert("Support ticket submitted! We'll respond within 24 hours.");
+      } catch {
+        // fallback: save locally if backend doesn't have /tickets yet
+        setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
+        setSupportMsg(""); setSupportSubj("");
+        showAlert("Ticket submitted! We'll respond within 24 hours.");
+      }
+    };
+
+    return (
+      <div>
+        <div className="section-title">Customer Support</div>
+        <div className="section-sub">We're here to help you</div>
+        <div className="support-grid">
+          <div className="support-opt">
+            <div className="support-opt-icon">📞</div>
+            <div className="support-opt-label">Call Us</div>
+            <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 4 }}>09456475556</div>
           </div>
-        ))}
-      </div>
-      <div className="card">
-        <h3 style={{ fontFamily: "Playfair Display,serif", marginBottom: 18, color: "var(--gold)" }}>Send a Message</h3>
-        <div className="form-group"><label>Subject</label>
-          <select value={supportSubj} onChange={e => setSupportSubj(e.target.value)}>
-            {["Select topic", "Order Issue", "Delivery Problem", "Product Inquiry", "Return/Refund", "Other"].map(s => <option key={s}>{s}</option>)}
-          </select>
+          <div className="support-opt">
+            <div className="support-opt-icon">📧</div>
+            <div className="support-opt-label">Email</div>
+            <a href="mailto:Chanetics@gmail.com" style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
+              Chanetics@gmail.com
+            </a>
+          </div>
+          <div className="support-opt">
+            <div className="support-opt-icon">💬</div>
+            <div className="support-opt-label">Facebook</div>
+            <a href="https://www.facebook.com/Kristian.Raganas" target="_blank" rel="noreferrer"
+              style={{ fontSize: 12, color: "var(--gold)", marginTop: 4, display: "block", textDecoration: "none" }}>
+              Kristian Raganas
+            </a>
+          </div>
         </div>
-        <div className="form-group"><label>Message</label>
-          <textarea placeholder="Describe your concern..." style={{ minHeight: 120 }} value={supportMsg} onChange={e => setSupportMsg(e.target.value)} />
-        </div>
-        <button className="btn btn-primary" onClick={() => {
-          if (!supportMsg) return showAlert("Please enter a message.", "error");
-          setTickets(prev => [...prev, { id: "TKT-" + Date.now(), subj: supportSubj, msg: supportMsg, date: new Date().toLocaleDateString(), status: "Open" }]);
-          setSupportMsg(""); setSupportSubj("");
-          showAlert("Support ticket submitted! We'll respond within 24 hours.");
-        }}>Submit Ticket</button>
-        {tickets.length > 0 && <div style={{ marginTop: 22 }}>
-          <h4 style={{ marginBottom: 12, fontWeight: 600, color: "var(--gold)" }}>Your Tickets</h4>
-          {tickets.map(t => (
-            <div key={t.id} style={{ padding: 12, background: "var(--black-soft)", border: "1px solid var(--border-gold)", borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontWeight: 600, color: "var(--text)" }}>{t.id} — {t.subj}</span><span className="badge badge-occ">{t.status}</span></div>
-              <div style={{ color: "var(--text2)", marginTop: 5 }}>{t.msg}</div>
+        <div className="card">
+          <h3 style={{ fontFamily: "Playfair Display,serif", marginBottom: 18, color: "var(--gold)" }}>Send a Message</h3>
+          <div className="form-group"><label>Subject</label>
+            <select value={supportSubj} onChange={e => setSupportSubj(e.target.value)}>
+              {["Select topic", "Order Issue", "Delivery Problem", "Product Inquiry", "Return/Refund", "Other"].map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="form-group"><label>Message</label>
+            <textarea
+              placeholder="Describe your concern..."
+              style={{ minHeight: 120 }}
+              value={supportMsg}
+              onChange={e => setSupportMsg(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={submitTicket}>Submit Ticket</button>
+          {tickets.length > 0 && (
+            <div style={{ marginTop: 22 }}>
+              <h4 style={{ marginBottom: 12, fontWeight: 600, color: "var(--gold)" }}>Your Submitted Tickets</h4>
+              {tickets.map(t => (
+                <div key={t.id} style={{ padding: 12, background: "var(--black-soft)", border: "1px solid var(--border-gold)", borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, color: "var(--gold)", fontSize: 12 }}>{t.id}</span>
+                    <span className="badge badge-occ">{t.status}</span>
+                  </div>
+                  <div style={{ fontWeight: 500, color: "var(--text)", marginBottom: 3 }}>{t.subject || t.subj}</div>
+                  <div style={{ color: "var(--text2)" }}>{t.message || t.msg}</div>
+                  <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>{t.date}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>}
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ── MAIN RENDER ────────────────────────────────────────
   return (
