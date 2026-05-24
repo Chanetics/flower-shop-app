@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const db = require("./db");
+const { sendDeliveredEmail } = require("./utils/mailer");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -112,8 +113,23 @@ app.get("/orders/user/:userId", (req, res) => {
 });
 
 app.put("/orders/:id/status", (req, res) => {
-  db.query("UPDATE orders SET status = ? WHERE id = ?", [req.body.status, req.params.id], (err) => {
+  const { status } = req.body;
+  const orderId = req.params.id;
+
+  db.query("UPDATE orders SET status = ? WHERE id = ?", [status, orderId], (err) => {
     if (err) return res.status(500).json({ message: "Server error" });
+
+    if (status === "Delivered") {
+      db.query("SELECT user_name, user_email, total FROM orders WHERE id = ?", [orderId], (err, results) => {
+        if (!err && results.length > 0) {
+          const { user_name, user_email, total } = results[0];
+          sendDeliveredEmail(user_email, user_name, orderId, total)
+            .then(() => console.log("Delivery email sent to", user_email))
+            .catch((e) => console.error("Email error:", e));
+        }
+      });
+    }
+
     res.json({ message: "Status updated" });
   });
 });
