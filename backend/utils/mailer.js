@@ -16,14 +16,6 @@ const transporter = nodemailer.createTransport({
   socketTimeout: 10000,
 });
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Gmail connection failed:", error);
-  } else {
-    console.log("✅ Gmail connected and ready to send!");
-  }
-});
-
 const sendDeliveredEmail = async (toEmail, customerName, orderId, total) => {
   const mailOptions = {
     from: `"JM Flower Shop 🌸" <${process.env.GMAIL_USER}>`,
@@ -46,7 +38,6 @@ const sendDeliveredEmail = async (toEmail, customerName, orderId, total) => {
 
   const info = await transporter.sendMail(mailOptions);
   console.log("✅ Email sent! Message ID:", info.messageId);
-  console.log("📧 Response:", info.response);
   return info;
 };
 
