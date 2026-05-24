@@ -1,23 +1,20 @@
+require("dotenv").config();
 const mysql = require("mysql2");
 
-const pool = mysql.createPool({
-  host: "kodama.proxy.rlwy.net",
-  user: "root",
-  password: "KpIQOiLnVpCSnDSZbstGyRBfIpDWOsYM",
-  database: "railway",
-  port: 26625,
-  waitForConnections: true,
-  connectionLimit: 10,
-  connectTimeout: 30000
+const db = mysql.createConnection({
+  host:     process.env.DB_HOST,
+  port:     process.env.DB_PORT,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
 });
 
-pool.getConnection((err, connection) => {
+db.connect((err) => {
   if (err) {
-    console.error("❌ MySQL connection failed:", err);
-    return;
+    console.error("❌ DB connection failed:", err.message);
+    throw err;
   }
-  console.log("✅ Connected to MySQL database");
-  connection.release();
+  console.log("Connected to Railway MySQL! 🌸");
 });
 
-module.exports = pool;
+module.exports = db;
