@@ -463,7 +463,7 @@ export default function App() {
   const [giftNote, setGiftNote] = useState("");
   const [adminTab, setAdminTab] = useState("products");
   const [editProduct, setEditProduct] = useState(null);
-  const [newProduct, setNewProduct] = useState({ name:"",price:"",stock:"",category:"",occasion:"",emoji:"🌹",description:"" });
+  // newProduct state moved into ProductForm component
   const [supportSubj, setSupportSubj] = useState("Select topic");
   const [supportMsg, setSupportMsg] = useState("");
   const [tickets, setTickets] = useState([]);
@@ -617,16 +617,15 @@ export default function App() {
     catch { showAlert("Failed to delete.", "error"); }
   };
 
-  const adminSaveProduct = async () => {
-    const np = editProduct || newProduct;
-    if (!np.name || !np.price || !np.stock) return showAlert("Fill required fields.", "error");
+  const adminSaveProduct = async (formData, isEdit) => {
+    if (!formData.name || !formData.price || !formData.stock) return showAlert("Fill required fields.", "error");
     try {
-      if (editProduct) {
-        await fetch(`${API}/products/${np.id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(np) });
-        setEditProduct(null); showAlert("Product updated!");
+      if (isEdit) {
+        await fetch(`${API}/products/${formData.id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
+        setEditProduct(null);
+        showAlert("Product updated!");
       } else {
-        await fetch(`${API}/products`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(np) });
-        setNewProduct({ name:"",price:"",stock:"",category:"",occasion:"",emoji:"🌹",description:"" });
+        await fetch(`${API}/products`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
         showAlert("Product added!");
       }
       fetchProducts();
@@ -678,16 +677,68 @@ const OrdersView = ({ orders, setView }) => {
   );
 };
 
+// Product form with LOCAL state so typing never re-mounts the component
+const ProductForm = ({ editProduct, setEditProduct, onSave }) => {
+  const [form, setForm] = useState(
+    editProduct || { name:"", price:"", stock:"", category:"", occasion:"", emoji:"🌹", description:"" }
+  );
+  // Sync if editProduct changes from outside (e.g. clicking Edit button)
+  useEffect(() => {
+    setForm(editProduct || { name:"", price:"", stock:"", category:"", occasion:"", emoji:"🌹", description:"" });
+  }, [editProduct]);
+
+  const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
+
+  const handleSave = () => onSave(form, !!editProduct);
+
+  return (
+    <div className="card">
+      <h3 style={{ fontFamily:"Playfair Display,serif", marginBottom:18, color:"var(--gold)" }}>
+        {editProduct ? "Edit Product" : "Add New Product"}
+      </h3>
+      <div className="row">
+        <div className="col-half">
+          <div className="form-group"><label>Name *</label>
+            <input placeholder="Product name" value={form.name} onChange={e => set("name", e.target.value)} />
+          </div>
+          <div className="form-group"><label>Price (₱) *</label>
+            <input type="number" placeholder="Price" value={form.price} onChange={e => set("price", e.target.value)} />
+          </div>
+          <div className="form-group"><label>Stock *</label>
+            <input type="number" placeholder="Stock" value={form.stock} onChange={e => set("stock", e.target.value)} />
+          </div>
+        </div>
+        <div className="col-half">
+          <div className="form-group"><label>Category</label>
+            <input placeholder="e.g. Roses" value={form.category||""} onChange={e => set("category", e.target.value)} />
+          </div>
+          <div className="form-group"><label>Occasion</label>
+            <input placeholder="e.g. Birthday" value={form.occasion||""} onChange={e => set("occasion", e.target.value)} />
+          </div>
+          <div className="form-group"><label>Emoji</label>
+            <input placeholder="🌹" value={form.emoji||""} style={{ maxWidth:80 }} onChange={e => set("emoji", e.target.value)} />
+          </div>
+        </div>
+      </div>
+      <div className="form-group"><label>Description</label>
+        <textarea placeholder="Product description..." value={form.description||""} onChange={e => set("description", e.target.value)} />
+      </div>
+      <div style={{ display:"flex", gap:10 }}>
+        <button className="btn btn-primary" onClick={handleSave}>
+          {editProduct ? "Save Changes" : "Add Product"}
+        </button>
+        {editProduct && <button className="btn btn-secondary" onClick={() => setEditProduct(null)}>Cancel</button>}
+      </div>
+    </div>
+  );
+};
+
 const AdminView = ({ allOrders, products, allTickets, adminTab, setAdminTab,
-                     editProduct, setEditProduct, newProduct, setNewProduct,
+                     editProduct, setEditProduct,
                      adminSaveProduct, adminDeleteProduct, adminUpdateStatus,
                      adminUpdateTicketStatus, fetchAllOrders, fetchUsers,
                      fetchAllTickets, users }) => {
   const revenue = allOrders.filter(o => o.status !== "Cancelled").reduce((s,o) => s+parseFloat(o.total||0), 0);
-  const np = editProduct || newProduct;
-  const setNp = (field, val) => editProduct
-    ? setEditProduct({ ...editProduct, [field]:val })
-    : setNewProduct(prev => ({ ...prev, [field]:val }));
 
   return (
     <div>
@@ -724,28 +775,11 @@ const AdminView = ({ allOrders, products, allTickets, adminTab, setAdminTab,
 
       {adminTab === "products" && (
         <div>
-          <div className="card">
-            <h3 style={{ fontFamily:"Playfair Display,serif",marginBottom:18,color:"var(--gold)" }}>
-              {editProduct ? "Edit Product" : "Add New Product"}
-            </h3>
-            <div className="row">
-              <div className="col-half">
-                <div className="form-group"><label>Name *</label><input placeholder="Product name" value={np.name} onChange={e => setNp("name",e.target.value)} /></div>
-                <div className="form-group"><label>Price (₱) *</label><input type="number" placeholder="Price" value={np.price} onChange={e => setNp("price",e.target.value)} /></div>
-                <div className="form-group"><label>Stock *</label><input type="number" placeholder="Stock" value={np.stock} onChange={e => setNp("stock",e.target.value)} /></div>
-              </div>
-              <div className="col-half">
-                <div className="form-group"><label>Category</label><input placeholder="e.g. Roses" value={np.category||""} onChange={e => setNp("category",e.target.value)} /></div>
-                <div className="form-group"><label>Occasion</label><input placeholder="e.g. Birthday" value={np.occasion||""} onChange={e => setNp("occasion",e.target.value)} /></div>
-                <div className="form-group"><label>Emoji</label><input placeholder="🌹" value={np.emoji||""} style={{ maxWidth:80 }} onChange={e => setNp("emoji",e.target.value)} /></div>
-              </div>
-            </div>
-            <div className="form-group"><label>Description</label><textarea placeholder="Product description..." value={np.description||""} onChange={e => setNp("description",e.target.value)} /></div>
-            <div style={{ display:"flex",gap:10 }}>
-              <button className="btn btn-primary" onClick={adminSaveProduct}>{editProduct?"Save Changes":"Add Product"}</button>
-              {editProduct && <button className="btn btn-secondary" onClick={() => setEditProduct(null)}>Cancel</button>}
-            </div>
-          </div>
+          <ProductForm
+            editProduct={editProduct}
+            setEditProduct={setEditProduct}
+            onSave={adminSaveProduct}
+          />
           <div className="card">
             <table className="admin-table">
               <thead><tr>{["Flower","Category","Occasion","Price","Stock","Actions"].map(c => <th key={c}>{c}</th>)}</tr></thead>
@@ -919,7 +953,6 @@ const AdminView = ({ allOrders, products, allTickets, adminTab, setAdminTab,
               allOrders={allOrders} products={products} allTickets={allTickets}
               adminTab={adminTab} setAdminTab={setAdminTab}
               editProduct={editProduct} setEditProduct={setEditProduct}
-              newProduct={newProduct} setNewProduct={setNewProduct}
               adminSaveProduct={adminSaveProduct} adminDeleteProduct={adminDeleteProduct}
               adminUpdateStatus={adminUpdateStatus} adminUpdateTicketStatus={adminUpdateTicketStatus}
               fetchAllOrders={fetchAllOrders} fetchUsers={fetchUsers}
