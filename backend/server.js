@@ -155,6 +155,62 @@ app.get("/users", (req, res) => {
   });
 });
 
+// ── TICKETS ────────────────────────────────────────────────────────────────
+
+// Create tickets table if it doesn't exist yet
+db.query(`
+  CREATE TABLE IF NOT EXISTS tickets (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id INT,
+    user_name VARCHAR(100),
+    user_email VARCHAR(100),
+    subject VARCHAR(200),
+    message TEXT,
+    status VARCHAR(50) DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`, (err) => {
+  if (err) console.error("❌ Failed to create tickets table:", err.message);
+  else console.log("✅ Tickets table ready");
+});
+
+// GET all tickets — admin dashboard
+app.get("/tickets", (req, res) => {
+  db.query("SELECT * FROM tickets ORDER BY created_at DESC", (err, results) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    res.json(results);
+  });
+});
+
+// POST new ticket — customer submits
+app.post("/tickets", (req, res) => {
+  const { id, userId, userName, userEmail, subject, message, status } = req.body;
+  if (!id || !message) return res.status(400).json({ message: "Missing required fields" });
+  db.query(
+    "INSERT INTO tickets (id, user_id, user_name, user_email, subject, message, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [id, userId || null, userName || "Guest", userEmail || "", subject || "", message, status || "Open"],
+    (err) => {
+      if (err) {
+        console.error("❌ Ticket insert error:", err.message);
+        return res.status(500).json({ message: "Failed to save ticket", error: err.message });
+      }
+      console.log("✅ Ticket saved:", id);
+      res.json({ success: true, id });
+    }
+  );
+});
+
+// PUT update ticket status — admin updates
+app.put("/tickets/:id/status", (req, res) => {
+  const { status } = req.body;
+  db.query("UPDATE tickets SET status = ? WHERE id = ?", [status, req.params.id], (err) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    res.json({ message: "Ticket status updated" });
+  });
+});
+
+// ── END TICKETS ────────────────────────────────────────────────────────────
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
