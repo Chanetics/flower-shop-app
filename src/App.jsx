@@ -316,7 +316,7 @@ const CartView = ({ cart, updateQty, cartTotal, cartQty, grandTotal, deliveryFee
   );
 };
 
-const SupportView = ({ user, supportSubj, setSupportSubj, supportMsg, setSupportMsg, tickets, setTickets, showAlert }) => {
+const SupportView = ({ user, supportSubj, setSupportSubj, supportMsg, setSupportMsg, tickets, setTickets, showAlert, onTicketSubmitted }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const submitTicket = async () => {
@@ -333,21 +333,29 @@ const SupportView = ({ user, supportSubj, setSupportSubj, supportMsg, setSupport
       message: supportMsg,
       status: "Open"
     };
+    let savedToServer = false;
     try {
       const res = await fetch(`${API}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error("Server error");
+      if (res.ok) {
+        savedToServer = true;
+        if (onTicketSubmitted) onTicketSubmitted();
+      }
     } catch (e) {
       // fallback: still show locally even if backend fails
     }
     setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
     setSupportMsg("");
     setSupportSubj("Select topic");
-    showAlert("Ticket submitted! We'll respond within 24 hours. 🌸");
+ showAlert(savedToServer
+      ? "Ticket submitted! We'll respond within 24 hours. 🌸"
+      : "Ticket saved locally (server unreachable)."
+    );
     setSubmitting(false);
+  };se);
   };
 
   return (
@@ -494,9 +502,14 @@ export default function App() {
       const r = await fetch(`${API}/tickets`);
       if (r.ok) {
         const data = await r.json();
+        console.log("[fetchAllTickets] response:", data);
         setAllTickets(Array.isArray(data) ? data : []);
+      } else {
+        console.warn("[fetchAllTickets] non-ok status:", r.status);
       }
-    } catch {}
+    } catch (e) {
+      console.error("[fetchAllTickets] error:", e);
+    }
   };
 
   const showAlert = (msg, type = "success") => {
@@ -903,6 +916,7 @@ export default function App() {
               supportMsg={supportMsg}   setSupportMsg={setSupportMsg}
               tickets={tickets}         setTickets={setTickets}
               showAlert={showAlert}
+              onTicketSubmitted={fetchAllTickets}
             />
           )}
         </div>
