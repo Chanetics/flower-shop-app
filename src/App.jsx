@@ -482,6 +482,12 @@ export default function App() {
   }, []);
 
   useEffect(() => { fetchProducts(); }, []);
+
+  // Auto-refresh products every 30 seconds so customers see new items without reloading
+  useEffect(() => {
+    const interval = setInterval(() => { fetchProducts(); }, 30000);
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
     if (user) {
       fetchMyOrders();
@@ -621,15 +627,17 @@ export default function App() {
     if (!formData.name || !formData.price || !formData.stock) return showAlert("Fill required fields.", "error");
     try {
       if (isEdit) {
-        await fetch(`${API}/products/${formData.id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
+        const res = await fetch(`${API}/products/${formData.id}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
+        if (!res.ok) throw new Error("Update failed");
         setEditProduct(null);
-        showAlert("Product updated!");
+        showAlert(`"${formData.name}" updated successfully!`);
       } else {
-        await fetch(`${API}/products`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
-        showAlert("Product added!");
+        const res = await fetch(`${API}/products`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(formData) });
+        if (!res.ok) throw new Error("Add failed");
+        showAlert(`"${formData.name}" added! Now visible to customers. 🌹`);
       }
-      fetchProducts();
-    } catch { showAlert("Failed to save.", "error"); }
+      await fetchProducts(); // await so products state is updated before UI reacts
+    } catch (e) { showAlert("Failed to save. Check connection.", "error"); }
   };
 
 const OrdersView = ({ orders, setView }) => {
@@ -892,14 +900,14 @@ const AdminView = ({ allOrders, products, allTickets, adminTab, setAdminTab,
       <style>{styles}</style>
       <div id="app">
         <nav className="nav">
-          <div className="nav-brand" onClick={() => setView("shop")}>
+          <div className="nav-brand" onClick={() => { fetchProducts(); setView("shop"); }}>
             <FlowerLogo size={52} />
             <div className="nav-brand-text">JM Flower Shop <span>premium florist</span></div>
           </div>
           <div className="nav-actions">
             {user ? (
               <>
-                <button className="nav-btn" onClick={() => setView("shop")}>Shop</button>
+                <button className="nav-btn" onClick={() => { fetchProducts(); setView("shop"); }}>Shop</button>
                 <button className="nav-btn" onClick={() => { fetchMyOrders(); setView("orders"); }}>My Orders</button>
                 {user.role === "admin" && (
                   <button className="nav-btn" onClick={() => { fetchAllOrders(); fetchUsers(); fetchAllTickets(); setView("admin"); }}>Admin</button>
