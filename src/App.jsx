@@ -335,26 +335,35 @@ const SupportView = ({ user, supportSubj, setSupportSubj, supportMsg, setSupport
       status: "Open"
     };
     let savedToServer = false;
+    let errorDetail = "";
     try {
+      console.log("[submitTicket] Sending to server:", payload);
       const res = await fetch(`${API}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
+      const resData = await res.json().catch(() => ({}));
+      console.log("[submitTicket] Response:", res.status, resData);
       if (res.ok) {
         savedToServer = true;
         if (onTicketSubmitted) onTicketSubmitted();
+      } else {
+        errorDetail = resData.message || resData.error || `HTTP ${res.status}`;
+        console.error("[submitTicket] Server error:", errorDetail);
       }
     } catch (e) {
-      // fallback: still show locally even if backend fails
+      errorDetail = e.message;
+      console.error("[submitTicket] Network error:", e);
     }
     setTickets(prev => [...prev, { ...payload, date: new Date().toLocaleDateString() }]);
     setSupportMsg("");
     setSupportSubj("Select topic");
- showAlert(savedToServer
-      ? "Ticket submitted! We'll respond within 24 hours. 🌸"
-      : "Ticket saved locally (server unreachable)."
-    );
+    if (savedToServer) {
+      showAlert("Ticket submitted! We'll respond within 24 hours. 🌸");
+    } else {
+      showAlert(`Could not save to server: ${errorDetail}. Please try again.`, "error");
+    }
     setSubmitting(false);
   };
 
