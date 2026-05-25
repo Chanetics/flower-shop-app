@@ -633,221 +633,225 @@ export default function App() {
     } catch { showAlert("Failed to save.", "error"); }
   };
 
-  const OrdersView = () => {
-    if (orders.length === 0) return (
-      <div className="empty">
-        <div className="empty-icon">📦</div><p>No orders yet</p>
-        <button className="btn btn-primary" onClick={() => setView("shop")}>Start Shopping</button>
-      </div>
-    );
-    return (
-      <div>
-        <div className="section-title">My Orders</div>
-        <div className="section-sub">Track your flower deliveries</div>
-        {orders.map(order => {
-          const si = STATUS_STEPS.indexOf(order.status);
-          const items = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
-          return (
-            <div className="order-card" key={order.id}>
-              <div className="order-header">
-                <div>
-                  <div style={{ fontWeight:600,marginBottom:3,color:"var(--gold)",fontSize:14 }}>{order.id}</div>
-                  <div style={{ fontSize:12,color:"var(--text3)" }}>
-                    ₱{parseFloat(order.total).toLocaleString()} · {order.delivery_type==="pickup"?"Store Pickup":"Delivery"} · {order.delivery_date}
-                  </div>
-                </div>
-                <span className={`status-badge status-${order.status==="Out for Delivery"?"Out":order.status}`}>{order.status}</span>
-              </div>
-              <div className="track-bar">
-                {STATUS_STEPS.map((step,i) => (
-                  <div className="track-step" key={step}>
-                    {i < STATUS_STEPS.length-1 && <div className={`track-line ${si>i?"done":""}`} />}
-                    <div className={`track-dot ${si>i?"done":si===i?"current":""}`} />
-                    <div className={`track-label ${si>i?"done":si===i?"current":""}`}>{step}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ fontSize:13,color:"var(--text2)",marginTop:10 }}>
-                {items.map(i => `${i.emoji} ${i.name} x${i.qty}`).join(", ")}
-              </div>
-              {order.gift_note && <div style={{ fontSize:12,color:"var(--text3)",fontStyle:"italic",marginTop:6 }}>🌸 "{order.gift_note}"</div>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const AdminView = () => {
-    const revenue = allOrders.filter(o => o.status !== "Cancelled").reduce((s,o) => s+parseFloat(o.total||0), 0);
-    const np = editProduct || newProduct;
-    const setNp = (field, val) => editProduct
-      ? setEditProduct({ ...editProduct, [field]:val })
-      : setNewProduct({ ...newProduct, [field]:val });
-
-    return (
-      <div>
-        <div className="section-title">Admin Dashboard</div>
-        <div className="section-sub">Manage your flower shop</div>
-        <div className="stats-grid">
-          {[
-            ["₱"+revenue.toLocaleString(),"Total Revenue"],
-            [String(allOrders.length),"Total Orders"],
-            [String(products.length),"Products"],
-            [String(allTickets.length),"Support Tickets"]
-          ].map(([n,l]) => (
-            <div className="stat-card" key={l}><div className="stat-num">{n}</div><div className="stat-label">{l}</div></div>
-          ))}
-        </div>
-        <div className="tabs">
-          {["products","orders","users","tickets"].map(t => (
-            <button key={t} className={`tab ${adminTab===t?"active":""}`}
-              onClick={() => {
-                setAdminTab(t);
-                if (t==="orders")  fetchAllOrders();
-                if (t==="users")   fetchUsers();
-                if (t==="tickets") fetchAllTickets();
-              }}>
-              {t.charAt(0).toUpperCase()+t.slice(1)}
-              {t==="tickets" && allTickets.length > 0 && (
-                <span style={{ marginLeft:6,background:"var(--gold)",color:"var(--black)",borderRadius:"50%",width:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700 }}>
-                  {allTickets.filter(tk => tk.status === "Open").length || ""}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {adminTab === "products" && (
-          <div>
-            <div className="card">
-              <h3 style={{ fontFamily:"Playfair Display,serif",marginBottom:18,color:"var(--gold)" }}>
-                {editProduct ? "Edit Product" : "Add New Product"}
-              </h3>
-              <div className="row">
-                <div className="col-half">
-                  <div className="form-group"><label>Name *</label><input placeholder="Product name" value={np.name} onChange={e => setNp("name",e.target.value)} /></div>
-                  <div className="form-group"><label>Price (₱) *</label><input type="number" placeholder="Price" value={np.price} onChange={e => setNp("price",e.target.value)} /></div>
-                  <div className="form-group"><label>Stock *</label><input type="number" placeholder="Stock" value={np.stock} onChange={e => setNp("stock",e.target.value)} /></div>
-                </div>
-                <div className="col-half">
-                  <div className="form-group"><label>Category</label><input placeholder="e.g. Roses" value={np.category||""} onChange={e => setNp("category",e.target.value)} /></div>
-                  <div className="form-group"><label>Occasion</label><input placeholder="e.g. Birthday" value={np.occasion||""} onChange={e => setNp("occasion",e.target.value)} /></div>
-                  <div className="form-group"><label>Emoji</label><input placeholder="🌹" value={np.emoji||""} style={{ maxWidth:80 }} onChange={e => setNp("emoji",e.target.value)} /></div>
+const OrdersView = ({ orders, setView }) => {
+  if (orders.length === 0) return (
+    <div className="empty">
+      <div className="empty-icon">📦</div><p>No orders yet</p>
+      <button className="btn btn-primary" onClick={() => setView("shop")}>Start Shopping</button>
+    </div>
+  );
+  return (
+    <div>
+      <div className="section-title">My Orders</div>
+      <div className="section-sub">Track your flower deliveries</div>
+      {orders.map(order => {
+        const si = STATUS_STEPS.indexOf(order.status);
+        const items = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
+        return (
+          <div className="order-card" key={order.id}>
+            <div className="order-header">
+              <div>
+                <div style={{ fontWeight:600,marginBottom:3,color:"var(--gold)",fontSize:14 }}>{order.id}</div>
+                <div style={{ fontSize:12,color:"var(--text3)" }}>
+                  ₱{parseFloat(order.total).toLocaleString()} · {order.delivery_type==="pickup"?"Store Pickup":"Delivery"} · {order.delivery_date}
                 </div>
               </div>
-              <div className="form-group"><label>Description</label><textarea placeholder="Product description..." value={np.description||""} onChange={e => setNp("description",e.target.value)} /></div>
-              <div style={{ display:"flex",gap:10 }}>
-                <button className="btn btn-primary" onClick={adminSaveProduct}>{editProduct?"Save Changes":"Add Product"}</button>
-                {editProduct && <button className="btn btn-secondary" onClick={() => setEditProduct(null)}>Cancel</button>}
-              </div>
+              <span className={`status-badge status-${order.status==="Out for Delivery"?"Out":order.status}`}>{order.status}</span>
             </div>
-            <div className="card">
-              <table className="admin-table">
-                <thead><tr>{["Flower","Category","Occasion","Price","Stock","Actions"].map(c => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>{products.map(p => (
-                  <tr key={p.id}>
-                    <td style={{ color:"var(--text)" }}>{p.emoji} {p.name}</td>
-                    <td>{p.category||"—"}</td>
-                    <td>{p.occasion||"—"}</td>
-                    <td style={{ color:"var(--gold)" }}>₱{parseFloat(p.price).toLocaleString()}</td>
-                    <td>{p.stock}</td>
-                    <td>
-                      <div style={{ display:"flex",gap:6 }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setEditProduct({...p})}>Edit</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => adminDeleteProduct(p.id)}>Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}</tbody>
-              </table>
+            <div className="track-bar">
+              {STATUS_STEPS.map((step,i) => (
+                <div className="track-step" key={step}>
+                  {i < STATUS_STEPS.length-1 && <div className={`track-line ${si>i?"done":""}`} />}
+                  <div className={`track-dot ${si>i?"done":si===i?"current":""}`} />
+                  <div className={`track-label ${si>i?"done":si===i?"current":""}`}>{step}</div>
+                </div>
+              ))}
             </div>
+            <div style={{ fontSize:13,color:"var(--text2)",marginTop:10 }}>
+              {items.map(i => `${i.emoji} ${i.name} x${i.qty}`).join(", ")}
+            </div>
+            {order.gift_note && <div style={{ fontSize:12,color:"var(--text3)",fontStyle:"italic",marginTop:6 }}>🌸 "{order.gift_note}"</div>}
           </div>
-        )}
+        );
+      })}
+    </div>
+  );
+};
 
-        {adminTab === "orders" && (
+const AdminView = ({ allOrders, products, allTickets, adminTab, setAdminTab,
+                     editProduct, setEditProduct, newProduct, setNewProduct,
+                     adminSaveProduct, adminDeleteProduct, adminUpdateStatus,
+                     adminUpdateTicketStatus, fetchAllOrders, fetchUsers,
+                     fetchAllTickets, users }) => {
+  const revenue = allOrders.filter(o => o.status !== "Cancelled").reduce((s,o) => s+parseFloat(o.total||0), 0);
+  const np = editProduct || newProduct;
+  const setNp = (field, val) => editProduct
+    ? setEditProduct({ ...editProduct, [field]:val })
+    : setNewProduct(prev => ({ ...prev, [field]:val }));
+
+  return (
+    <div>
+      <div className="section-title">Admin Dashboard</div>
+      <div className="section-sub">Manage your flower shop</div>
+      <div className="stats-grid">
+        {[
+          ["₱"+revenue.toLocaleString(),"Total Revenue"],
+          [String(allOrders.length),"Total Orders"],
+          [String(products.length),"Products"],
+          [String(allTickets.length),"Support Tickets"]
+        ].map(([n,l]) => (
+          <div className="stat-card" key={l}><div className="stat-num">{n}</div><div className="stat-label">{l}</div></div>
+        ))}
+      </div>
+      <div className="tabs">
+        {["products","orders","users","tickets"].map(t => (
+          <button key={t} className={`tab ${adminTab===t?"active":""}`}
+            onClick={() => {
+              setAdminTab(t);
+              if (t==="orders")  fetchAllOrders();
+              if (t==="users")   fetchUsers();
+              if (t==="tickets") fetchAllTickets();
+            }}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+            {t==="tickets" && allTickets.filter(tk=>tk.status==="Open").length > 0 && (
+              <span style={{ marginLeft:6,background:"var(--gold)",color:"var(--black)",borderRadius:"50%",width:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700 }}>
+                {allTickets.filter(tk=>tk.status==="Open").length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {adminTab === "products" && (
+        <div>
           <div className="card">
-            {allOrders.length === 0
-              ? <div className="empty"><div className="empty-icon">📋</div><p>No orders yet</p></div>
-              : <table className="admin-table">
-                  <thead><tr>{["Order ID","Customer","Total","Date","Delivery Date","Status","Update"].map(c => <th key={c}>{c}</th>)}</tr></thead>
-                  <tbody>{allOrders.map(o => (
-                    <tr key={o.id}>
-                      <td style={{ color:"var(--gold)",fontSize:12 }}>{o.id}</td>
-                      <td style={{ color:"var(--text)" }}>{o.user_name||o.user_email}</td>
-                      <td style={{ color:"var(--gold)" }}>₱{parseFloat(o.total||0).toLocaleString()}</td>
-                      <td>{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
-                      <td>{o.delivery_date||"—"}</td>
-                      <td><span className={`status-badge status-${(o.status||"Pending")==="Out for Delivery"?"Out":(o.status||"Pending")}`}>{o.status}</span></td>
-                      <td>
-                        <select style={{ fontSize:12,padding:"5px 8px",border:"1px solid var(--border-gold)",borderRadius:6,background:"var(--black-soft)",color:"var(--text)" }}
-                          value={o.status} onChange={e => adminUpdateStatus(o.id, e.target.value)}>
-                          {[...STATUS_STEPS,"Cancelled"].map(s => <option key={s}>{s}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-            }
+            <h3 style={{ fontFamily:"Playfair Display,serif",marginBottom:18,color:"var(--gold)" }}>
+              {editProduct ? "Edit Product" : "Add New Product"}
+            </h3>
+            <div className="row">
+              <div className="col-half">
+                <div className="form-group"><label>Name *</label><input placeholder="Product name" value={np.name} onChange={e => setNp("name",e.target.value)} /></div>
+                <div className="form-group"><label>Price (₱) *</label><input type="number" placeholder="Price" value={np.price} onChange={e => setNp("price",e.target.value)} /></div>
+                <div className="form-group"><label>Stock *</label><input type="number" placeholder="Stock" value={np.stock} onChange={e => setNp("stock",e.target.value)} /></div>
+              </div>
+              <div className="col-half">
+                <div className="form-group"><label>Category</label><input placeholder="e.g. Roses" value={np.category||""} onChange={e => setNp("category",e.target.value)} /></div>
+                <div className="form-group"><label>Occasion</label><input placeholder="e.g. Birthday" value={np.occasion||""} onChange={e => setNp("occasion",e.target.value)} /></div>
+                <div className="form-group"><label>Emoji</label><input placeholder="🌹" value={np.emoji||""} style={{ maxWidth:80 }} onChange={e => setNp("emoji",e.target.value)} /></div>
+              </div>
+            </div>
+            <div className="form-group"><label>Description</label><textarea placeholder="Product description..." value={np.description||""} onChange={e => setNp("description",e.target.value)} /></div>
+            <div style={{ display:"flex",gap:10 }}>
+              <button className="btn btn-primary" onClick={adminSaveProduct}>{editProduct?"Save Changes":"Add Product"}</button>
+              {editProduct && <button className="btn btn-secondary" onClick={() => setEditProduct(null)}>Cancel</button>}
+            </div>
           </div>
-        )}
-
-        {adminTab === "users" && (
           <div className="card">
             <table className="admin-table">
-              <thead><tr>{["ID","Name","Email","Role"].map(c => <th key={c}>{c}</th>)}</tr></thead>
-              <tbody>{users.map(u => (
-                <tr key={u.id}>
-                  <td>{u.id}</td>
-                  <td style={{ color:"var(--text)" }}>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td><span className={`badge ${u.role==="admin"?"badge-occ":"badge-cat"}`}>{u.role}</span></td>
+              <thead><tr>{["Flower","Category","Occasion","Price","Stock","Actions"].map(c => <th key={c}>{c}</th>)}</tr></thead>
+              <tbody>{products.map(p => (
+                <tr key={p.id}>
+                  <td style={{ color:"var(--text)" }}>{p.emoji} {p.name}</td>
+                  <td>{p.category||"—"}</td>
+                  <td>{p.occasion||"—"}</td>
+                  <td style={{ color:"var(--gold)" }}>₱{parseFloat(p.price).toLocaleString()}</td>
+                  <td>{p.stock}</td>
+                  <td>
+                    <div style={{ display:"flex",gap:6 }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setEditProduct({...p})}>Edit</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => adminDeleteProduct(p.id)}>Delete</button>
+                    </div>
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
-        )}
+        </div>
+      )}
 
-        {adminTab === "tickets" && (
-          <div className="card">
-            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
-              <h3 style={{ fontFamily:"Playfair Display,serif",color:"var(--gold)" }}>Support Tickets ({allTickets.length})</h3>
-              <button className="btn btn-secondary btn-sm" onClick={fetchAllTickets}>↻ Refresh</button>
-            </div>
-            {allTickets.length === 0
-              ? <div className="empty"><div className="empty-icon">🎫</div><p>No support tickets yet</p></div>
-              : <table className="admin-table">
-                  <thead><tr>{["Ticket ID","Customer","Email","Subject","Message","Status","Update"].map(c => <th key={c}>{c}</th>)}</tr></thead>
-                  <tbody>{allTickets.map(t => (
-                    <tr key={t.id}>
-                      <td style={{ color:"var(--gold)",fontSize:11 }}>{t.id}</td>
-                      <td style={{ color:"var(--text)" }}>{t.user_name||"Guest"}</td>
-                      <td style={{ fontSize:12 }}>{t.user_email||"—"}</td>
-                      <td>{t.subject||"—"}</td>
-                      <td style={{ maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{t.message}</td>
-                      <td>
-                        <span className={`status-badge ${t.status==="Open"?"status-Pending":t.status==="Resolved"?"status-Delivered":"status-Processing"}`}>
-                          {t.status}
-                        </span>
-                      </td>
-                      <td>
-                        <select
-                          style={{ fontSize:12,padding:"5px 8px",border:"1px solid var(--border-gold)",borderRadius:6,background:"var(--black-soft)",color:"var(--text)" }}
-                          value={t.status}
-                          onChange={e => adminUpdateTicketStatus(t.id, e.target.value)}
-                        >
-                          {["Open","In Progress","Resolved"].map(s => <option key={s}>{s}</option>)}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-            }
+      {adminTab === "orders" && (
+        <div className="card">
+          {allOrders.length === 0
+            ? <div className="empty"><div className="empty-icon">📋</div><p>No orders yet</p></div>
+            : <table className="admin-table">
+                <thead><tr>{["Order ID","Customer","Total","Date","Delivery Date","Status","Update"].map(c => <th key={c}>{c}</th>)}</tr></thead>
+                <tbody>{allOrders.map(o => (
+                  <tr key={o.id}>
+                    <td style={{ color:"var(--gold)",fontSize:12 }}>{o.id}</td>
+                    <td style={{ color:"var(--text)" }}>{o.user_name||o.user_email}</td>
+                    <td style={{ color:"var(--gold)" }}>₱{parseFloat(o.total||0).toLocaleString()}</td>
+                    <td>{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
+                    <td>{o.delivery_date||"—"}</td>
+                    <td><span className={`status-badge status-${(o.status||"Pending")==="Out for Delivery"?"Out":(o.status||"Pending")}`}>{o.status}</span></td>
+                    <td>
+                      <select style={{ fontSize:12,padding:"5px 8px",border:"1px solid var(--border-gold)",borderRadius:6,background:"var(--black-soft)",color:"var(--text)" }}
+                        value={o.status} onChange={e => adminUpdateStatus(o.id, e.target.value)}>
+                        {[...STATUS_STEPS,"Cancelled"].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}</tbody>
+              </table>
+          }
+        </div>
+      )}
+
+      {adminTab === "users" && (
+        <div className="card">
+          <table className="admin-table">
+            <thead><tr>{["ID","Name","Email","Role"].map(c => <th key={c}>{c}</th>)}</tr></thead>
+            <tbody>{users.map(u => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td style={{ color:"var(--text)" }}>{u.name}</td>
+                <td>{u.email}</td>
+                <td><span className={`badge ${u.role==="admin"?"badge-occ":"badge-cat"}`}>{u.role}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+
+      {adminTab === "tickets" && (
+        <div className="card">
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+            <h3 style={{ fontFamily:"Playfair Display,serif",color:"var(--gold)" }}>Support Tickets ({allTickets.length})</h3>
+            <button className="btn btn-secondary btn-sm" onClick={fetchAllTickets}>↻ Refresh</button>
           </div>
-        )}
-      </div>
-    );
-  };
+          {allTickets.length === 0
+            ? <div className="empty"><div className="empty-icon">🎫</div><p>No support tickets yet</p></div>
+            : <table className="admin-table">
+                <thead><tr>{["Ticket ID","Customer","Email","Subject","Message","Status","Update"].map(c => <th key={c}>{c}</th>)}</tr></thead>
+                <tbody>{allTickets.map(t => (
+                  <tr key={t.id}>
+                    <td style={{ color:"var(--gold)",fontSize:11 }}>{t.id}</td>
+                    <td style={{ color:"var(--text)" }}>{t.user_name||"Guest"}</td>
+                    <td style={{ fontSize:12 }}>{t.user_email||"—"}</td>
+                    <td>{t.subject||"—"}</td>
+                    <td style={{ maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{t.message}</td>
+                    <td>
+                      <span className={`status-badge ${t.status==="Open"?"status-Pending":t.status==="Resolved"?"status-Delivered":"status-Processing"}`}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td>
+                      <select
+                        style={{ fontSize:12,padding:"5px 8px",border:"1px solid var(--border-gold)",borderRadius:6,background:"var(--black-soft)",color:"var(--text)" }}
+                        value={t.status}
+                        onChange={e => adminUpdateTicketStatus(t.id, e.target.value)}
+                      >
+                        {["Open","In Progress","Resolved"].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}</tbody>
+              </table>
+          }
+        </div>
+      )}
+    </div>
+  );
+};
 
   return (
     <>
@@ -907,8 +911,21 @@ export default function App() {
               checkout={checkout} loading={loading} setView={setView}
             />
           )}
-          {view === "orders" && user && <OrdersView />}
-          {view === "admin" && user?.role === "admin" && <AdminView />}
+          {view === "orders" && user && (
+            <OrdersView orders={orders} setView={setView} />
+          )}
+          {view === "admin" && user?.role === "admin" && (
+            <AdminView
+              allOrders={allOrders} products={products} allTickets={allTickets}
+              adminTab={adminTab} setAdminTab={setAdminTab}
+              editProduct={editProduct} setEditProduct={setEditProduct}
+              newProduct={newProduct} setNewProduct={setNewProduct}
+              adminSaveProduct={adminSaveProduct} adminDeleteProduct={adminDeleteProduct}
+              adminUpdateStatus={adminUpdateStatus} adminUpdateTicketStatus={adminUpdateTicketStatus}
+              fetchAllOrders={fetchAllOrders} fetchUsers={fetchUsers}
+              fetchAllTickets={fetchAllTickets} users={users}
+            />
+          )}
           {view === "support" && (
             <SupportView
               user={user}
